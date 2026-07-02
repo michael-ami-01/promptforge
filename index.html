@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PromptForge — AI Prompt Optimizer</title>
+    <meta name="description" content="Free AI prompt optimizer. Paste your prompt, get an enhanced version that gets better results from ChatGPT, Claude, and other AI models.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0b;
+            --surface: #141416;
+            --surface-2: #1c1c20;
+            --border: #2a2a30;
+            --text: #e8e8ed;
+            --text-muted: #8888a0;
+            --accent: #f59e0b;
+            --accent-glow: rgba(245, 158, 11, 0.3);
+            --grade-s: #f59e0b;
+            --grade-a: #22c55e;
+            --grade-b: #84cc16;
+            --grade-c: #eab308;
+            --grade-d: #f97316;
+            --grade-f: #ef4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .noise {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-top: 2rem;
+        }
+
+        .logo {
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 0.75rem;
+            background: linear-gradient(135deg, var(--text) 0%, var(--text-muted) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            max-width: 500px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 180px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            resize: vertical;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        textarea::placeholder {
+            color: #555;
+        }
+
+        .context-row {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .context-row select, .context-row input {
+            flex: 1;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.6rem 0.8rem;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+        }
+
+        .context-row select:focus, .context-row input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 1rem;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 1.5rem;
+        }
+
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .api-section {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .api-toggle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .api-toggle:hover { color: var(--text); }
+
+        .api-fields { display: none; margin-top: 0.75rem; }
+        .api-fields.visible { display: block; }
+
+        .api-key-input {
+            width: 100%;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.6rem 0.8rem;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        .api-key-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .api-note {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+
+        /* Results */
+        .results { display: none; }
+        .results.visible { display: block; }
+
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 600px) {
+            .comparison { grid-template-columns: 1fr; }
+        }
+
+        .comparison-col {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+
+        .comparison-col h3 {
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 0.75rem;
+        }
+
+        .comparison-col.original h3 { color: var(--text-muted); }
+        .comparison-col.optimized h3 { color: var(--accent); }
+
+        .comparison-col pre {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: var(--text);
+        }
+
+        .improvements {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        .improvements h3 {
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .improvement-item {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .improvement-item:last-child { border-bottom: none; }
+
+        .improvement-tag {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            margin-right: 0.5rem;
+        }
+
+        .tag-clarity { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .tag-specificity { background: rgba(99, 102, 241, 0.2); color: #6366f1; }
+        .tag-structure { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .tag-context { background: rgba(236, 72, 153, 0.2); color: #ec4899; }
+
+        .score-display {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .score-row {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .score-item {
+            text-align: center;
+        }
+
+        .score-value {
+            font-size: 2.5rem;
+            font-weight: 900;
+        }
+
+        .score-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .score-arrow {
+            font-size: 2rem;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+        }
+
+        .copy-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 1rem;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 0.75rem;
+        }
+
+        .copy-btn:hover { opacity: 0.9; }
+
+        .footer {
+            text-align: center;
+            padding: 3rem 0 2rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .loading.visible { display: block; }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Ad placeholder */
+        .ad-slot {
+            background: var(--surface-2);
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin: 1.5rem 0;
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .tool-link {
+            display: block;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-decoration: none;
+            color: var(--text);
+            font-size: 0.85rem;
+            transition: border-color 0.2s;
+        }
+
+        .tool-link:hover { border-color: var(--accent); }
+        .tool-link span { color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 0.25rem; }
+    </style>
+</head>
+<body>
+    <div class="noise"></div>
+    <div class="container">
+        <header class="header">
+            <div class="logo">⚡ PromptForge</div>
+            <h1>Make Any AI Prompt<br>10× Better</h1>
+            <p class="subtitle">Paste your prompt. Get an optimized version that delivers better results from ChatGPT, Claude, Gemini, and any AI model.</p>
+        </header>
+
+        <div class="card">
+            <label for="promptInput">Your Prompt</label>
+            <textarea id="promptInput" placeholder="Paste your AI prompt here...&#10;&#10;Example: Write me a blog post about productivity"></textarea>
+
+            <div class="context-row">
+                <select id="modelTarget">
+                    <option value="any">Target: Any AI Model</option>
+                    <option value="chatgpt">ChatGPT / GPT-4</option>
+                    <option value="claude">Claude</option>
+                    <option value="gemini">Gemini</option>
+                    <option value="llama">Llama / Open Source</option>
+                </select>
+                <select id="taskType">
+                    <option value="auto">Task: Auto-detect</option>
+                    <option value="writing">Writing / Content</option>
+                    <option value="coding">Coding</option>
+                    <option value="analysis">Analysis / Research</option>
+                    <option value="creative">Creative / Brainstorm</option>
+                    <option value="business">Business / Email</option>
+                </select>
+            </div>
+
+            <section class="api-section">
+                <div class="api-toggle" onclick="toggleApiFields()">
+                    🔑 Use your own API key (optional) ▾
+                </div>
+                <div class="api-fields" id="apiFields">
+                    <select id="providerSelect" style="width:100%; margin-bottom:0.5rem; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:0.6rem; color:var(--text); font-family:Inter,sans-serif; font-size:0.85rem;">
+                        <option value="anthropic">Anthropic (Claude)</option>
+                        <option value="openai">OpenAI (GPT-4)</option>
+                    </select>
+                    <input type="password" class="api-key-input" id="apiKeyInput" placeholder="sk-... or your API key">
+                    <p class="api-note">Your key stays in your browser. Never sent anywhere except the AI provider.</p>
+                </div>
+            </section>
+
+            <button class="btn" id="optimizeBtn" onclick="optimizePrompt()">
+                ⚡ Optimize My Prompt
+            </button>
+        </div>
+
+        <div class="ad-slot">
+            <!-- Google AdSense will go here -->
+            Ad Space — Coming Soon
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="color: var(--text-muted);">Analyzing and optimizing your prompt...</p>
+        </div>
+
+        <div class="results" id="results">
+            <div class="score-display">
+                <div class="score-row">
+                    <div class="score-item">
+                        <div class="score-value" id="beforeScore" style="color: var(--grade-d);">—</div>
+                        <div class="score-label">Before</div>
+                    </div>
+                    <div class="score-arrow">→</div>
+                    <div class="score-item">
+                        <div class="score-value" id="afterScore" style="color: var(--grade-a);">—</div>
+                        <div class="score-label">After</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="comparison">
+                <div class="comparison-col original">
+                    <h3>📝 Original</h3>
+                    <pre id="originalPrompt"></pre>
+                </div>
+                <div class="comparison-col optimized">
+                    <h3>⚡ Optimized</h3>
+                    <pre id="optimizedPrompt"></pre>
+                    <button class="copy-btn" onclick="copyOptimized()">📋 Copy Optimized Prompt</button>
+                </div>
+            </div>
+
+            <div class="improvements">
+                <h3>What Changed & Why</h3>
+                <div id="improvementsList"></div>
+            </div>
+        </div>
+
+        <div class="ad-slot">
+            <!-- Google AdSense will go here -->
+            Ad Space — Coming Soon
+        </div>
+
+        <div class="card" style="margin-top: 2rem;">
+            <label>More Free AI Tools</label>
+            <div class="tools-grid">
+                <a href="https://michael-ami-01.github.io/coldscore/" class="tool-link">
+                    📧 ColdScore
+                    <span>Grade your cold emails</span>
+                </a>
+                <a href="#" class="tool-link">
+                    📄 ResumeAI Score
+                    <span>Coming soon</span>
+                </a>
+                <a href="#" class="tool-link">
+                    🧠 AI Decision Council
+                    <span>Coming soon</span>
+                </a>
+            </div>
+        </div>
+
+        <footer class="footer">
+            Built by <a href="https://github.com/mzio" target="_blank">Michael Zhang</a> · Free forever · No signup required
+        </footer>
+    </div>
+
+    <script>
+    const PROXY_URL = ''; // Set when Cloudflare Worker is deployed
+
+    function toggleApiFields() {
+        document.getElementById('apiFields').classList.toggle('visible');
+    }
+
+    function getScoreColor(score) {
+        if (score >= 90) return '#22c55e';
+        if (score >= 75) return '#84cc16';
+        if (score >= 60) return '#eab308';
+        if (score >= 40) return '#f97316';
+        return '#ef4444';
+    }
+
+    async function optimizePrompt() {
+        const prompt = document.getElementById('promptInput').value.trim();
+        if (!prompt) { alert('Please enter a prompt to optimize.'); return; }
+
+        const model = document.getElementById('modelTarget').value;
+        const task = document.getElementById('taskType').value;
+        const btn = document.getElementById('optimizeBtn');
+
+        btn.disabled = true;
+        btn.textContent = 'Optimizing...';
+        document.getElementById('loading').classList.add('visible');
+        document.getElementById('results').classList.remove('visible');
+
+        const systemPrompt = `You are PromptForge, an expert AI prompt engineer. Analyze the user's prompt and return a JSON object with:
+{
+  "before_score": <number 1-100, how effective the original prompt is>,
+  "after_score": <number 1-100, how effective the optimized version is>,
+  "optimized_prompt": "<the improved prompt>",
+  "improvements": [
+    {"tag": "clarity|specificity|structure|context", "description": "<what was changed and why>"}
+  ]
+}
+
+Target AI model: ${model === 'any' ? 'general purpose' : model}
+Task type: ${task === 'auto' ? 'auto-detect from prompt' : task}
+
+Optimization principles:
+1. Add specificity — vague requests get vague answers
+2. Add structure — role, task, format, constraints
+3. Add context — who the output is for, what quality bar
+4. Remove ambiguity — each instruction should have one interpretation
+5. Add output format — specify exactly what the response should look like
+
+Return ONLY valid JSON, no markdown, no code fences.`;
+
+        try {
+            const result = await callAI(systemPrompt, `Optimize this prompt:\n\n${prompt}`);
+            displayResults(prompt, result);
+        } catch (err) {
+            alert('Error: ' + err.message + '\n\nTry adding your own API key.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '⚡ Optimize My Prompt';
+            document.getElementById('loading').classList.remove('visible');
+        }
+    }
+
+    async function callAI(systemPrompt, userMessage) {
+        const apiKey = document.getElementById('apiKeyInput').value.trim();
+        const provider = document.getElementById('providerSelect').value;
+
+        if (apiKey) {
+            return await callDirectAPI(systemPrompt, userMessage, provider, apiKey);
+        }
+
+        if (PROXY_URL) {
+            const resp = await fetch(PROXY_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ system: systemPrompt, message: userMessage })
+            });
+            if (!resp.ok) throw new Error('Proxy error: ' + resp.status);
+            const data = await resp.json();
+            return JSON.parse(data.text || data.content || data.result);
+        }
+
+        throw new Error('Please add your API key to use PromptForge. Click "Use your own API key" above.');
+    }
+
+    async function callDirectAPI(systemPrompt, userMessage, provider, apiKey) {
+        if (provider === 'anthropic') {
+            const resp = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': apiKey,
+                    'anthropic-version': '2023-06-01',
+                    'anthropic-dangerous-direct-browser-access': 'true'
+                },
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-20250514',
+                    max_tokens: 2000,
+                    system: systemPrompt,
+                    messages: [{ role: 'user', content: userMessage }]
+                })
+            });
+            if (!resp.ok) throw new Error('Anthropic API error: ' + resp.status);
+            const data = await resp.json();
+            return JSON.parse(data.content[0].text);
+        } else {
+            const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4o',
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userMessage }
+                    ],
+                    max_tokens: 2000
+                })
+            });
+            if (!resp.ok) throw new Error('OpenAI API error: ' + resp.status);
+            const data = await resp.json();
+            return JSON.parse(data.choices[0].message.content);
+        }
+    }
+
+    function displayResults(originalPrompt, result) {
+        document.getElementById('beforeScore').textContent = result.before_score;
+        document.getElementById('beforeScore').style.color = getScoreColor(result.before_score);
+        document.getElementById('afterScore').textContent = result.after_score;
+        document.getElementById('afterScore').style.color = getScoreColor(result.after_score);
+
+        document.getElementById('originalPrompt').textContent = originalPrompt;
+        document.getElementById('optimizedPrompt').textContent = result.optimized_prompt;
+
+        const listEl = document.getElementById('improvementsList');
+        listEl.innerHTML = '';
+        (result.improvements || []).forEach(imp => {
+            const tagClass = {
+                clarity: 'tag-clarity',
+                specificity: 'tag-specificity',
+                structure: 'tag-structure',
+                context: 'tag-context'
+            }[imp.tag] || 'tag-clarity';
+
+            const item = document.createElement('div');
+            item.className = 'improvement-item';
+            item.innerHTML = `<span class="improvement-tag ${tagClass}">${imp.tag}</span> ${imp.description}`;
+            listEl.appendChild(item);
+        });
+
+        document.getElementById('results').classList.add('visible');
+        document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function copyOptimized() {
+        const text = document.getElementById('optimizedPrompt').textContent;
+        navigator.clipboard.writeText(text).then(() => {
+            const btn = document.querySelector('.copy-btn');
+            btn.textContent = '✅ Copied!';
+            setTimeout(() => btn.textContent = '📋 Copy Optimized Prompt', 2000);
+        });
+    }
+    </script>
+</body>
+</html>
